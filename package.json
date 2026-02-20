@@ -1,0 +1,56 @@
+{
+  "name": "@guardbot/chalk",
+  "version": "1.0.0",
+  "description": "A simple colored logger built for Discord bots.",
+  "type": "module",
+  "main": "./build/index.cjs",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js",
+      "require": "./build/index.cjs"
+    }
+  },
+  "files": [
+    "build",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "rimraf build",
+    "build": "yarn run clean && tsup",
+    "test": "tsx tests/index.test.ts",
+    "test:webhook": "tsx tests/webhook.test.ts"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guardbotgg/chalk.git"
+  },
+  "keywords": [
+    "logger",
+    "chalk",
+    "colors",
+    "terminal"
+  ],
+  "license": "MIT",
+  "author": "Aniket",
+  "homepage": "https://github.com/guardbotgg/chalk#readme",
+  "bugs": {
+    "url": "https://github.com/guardbotgg/chalk/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.4.0"
+  }
+}
