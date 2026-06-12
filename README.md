@@ -68,13 +68,13 @@ logger.color('#4ADE80', 'Custom Hex Color');
 ### File Logging:
 ```ts
 const log = new Chalk({ file: './logs/bot.log' });
-log.info(['client'], 'Saved to file');
+log.info('Saved to file');
 ```
 
 ### Webhook Logging:
 ```ts
 const log = new Chalk({ webhook: 'https://discord.com/api/webhooks/...' });
-log.error(['client'], 'Critical failure!');
+log.error('Critical failure!');
 ```
 
 ### Timestamps:
