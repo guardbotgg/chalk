@@ -8,9 +8,19 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
 
 .vscode/
 .idea/
 *.tsbuildinfo
+*.tgz

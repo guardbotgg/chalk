@@ -6,5 +6,8 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  outDir: "build"
+  shims: true,
+  bundle: true,
+  outDir: "build",
+  external: ["pino", "pino-pretty"],
 });

@@ -8,9 +8,7 @@
     "rootDir": "./src",
     "outDir": "./build",
 
-    "declaration": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": false,
+    "declaration": false,
     "sourceMap": true,
 
     "strict": true,
@@ -19,9 +17,9 @@
     "forceConsistentCasingInFileNames": true,
 
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
 
+    "noEmit": true,
     "removeComments": false
   },
   "include": ["src"],

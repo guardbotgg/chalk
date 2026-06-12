@@ -2,7 +2,7 @@ name: Publish
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   build-and-publish:
@@ -28,7 +28,5 @@ jobs:
       - name: Build Framework
         run: yarn build
 
-      - name: Publish to NPM
+      - name: Publish to NPM via OIDC
         run: npm publish --provenance --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

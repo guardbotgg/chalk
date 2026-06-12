@@ -1,5 +1,5 @@
 # @guardbot/chalk
-> **A simple colored logger built for Discord bots.**
+> **A simple colored logger built for apps.**
 
 <div>
   <img src="https://raw.githubusercontent.com/guardbotgg/assets/master/made-with-typescript.svg" alt="badge" />
@@ -15,26 +15,39 @@ $ pnpm add @guardbot/chalk    # via pnpm
 ```
 
 
+## 📌 Choose Your Engine
+* **`Chalk` (Vanilla Engine):** Pure terminal piping, perfect for lightweight automation runners, CLI utilities, or small-scale applications.
+* **`PinoChalk` (Production Core):** Backed by the multi-threaded asynchronous `pino` worker stream architecture.
+
+
 ## 🪴 Basic Usage
 ```ts
-import { logger } from '@guardbot/chalk';
+import { Chalk, PinoChalk } from '@guardbot/chalk';
 
-logger.info(['client'], 'Bot started');
-logger.success(['command'], 'Ping executed');
-logger.warn(['cluster'], 'High memory usage');
-logger.error(['shard'], new Error('Something broke'));
+const logger = new Chalk({
+  timestamps: true,
+  labels: { client: 'blue' }
+});
+
+logger.info('Bot started');
+logger.success('Ping executed');
+logger.warn('High memory usage');
+logger.error(new Error('Something broke'));
 ```
 
 
 ### Scoped Loggers:
 ```ts
-import { logger } from '@guardbot/chalk';
+const logger = new Chalk({
+  timestamps: true,
+  labels: { client: 'blue' }
+});
 
-const shardLogger = logger.shard(1);
-shardLogger.info([], 'Shard ready');
+const cluster = logger.scope({ scopedLabels: { cluster_0: true } });
+cluster.info('Spawning structural cluster components...'); 
 
-const commandLogger = logger.command('ping');
-commandLogger.success([], 'Command executed');
+const shard = cluster.scope({ scopedLabels: { shard_4: 'blue' } });
+shard.success('Shard gateway synchronization complete.'); 
 ```
 
 
@@ -46,7 +59,7 @@ const logger = new Chalk({
   labels: { database: '#4ADE80' }
 });
 
-logger.info(['database'], 'Connected successfully');
+logger.info('Connected successfully');
 logger.rgb([255, 100, 50], 'Custom RGB color');
 logger.color('#4ADE80', 'Custom Hex Color');
 ```
@@ -70,13 +83,6 @@ const log = new Chalk({
   timestamps: true,
   timestampFormat: (date) => date.toISOString()
 });
-```
-
-### Timers:
-```ts
-logger.time('load');
-await doSomething();
-logger.timeEnd('load', ['client']);
 ```
 
 

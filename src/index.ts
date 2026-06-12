@@ -1,7 +1,7 @@
-export { Chalk } from './chalk';
-export type { ChalkOptions, ColorInput, ColorName } from './types';
-export { DefaultLabels, Palette } from './constants';
+import { Chalk } from './chalk/chalk';
 
-import { Chalk } from './chalk';
-const chalkIns = new Chalk();
-export default chalkIns;
+export { Chalk } from './chalk/chalk';
+export { PinoChalk } from './chalk/pinoChalk';
+export { ColorPalette, LabelColors } from './constants';
+export type { ChalkOptions, PinoChalkOptions, ColorInput, ColorName } from './types';
+export default Chalk;
