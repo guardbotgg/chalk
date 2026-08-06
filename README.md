@@ -20,9 +20,20 @@ $ pnpm add @guardbot/chalk    # via pnpm
 * **`PinoChalk` (Production Core):** Backed by the multi-threaded asynchronous `pino` worker stream architecture.
 
 
+## ☘️ Chalk Levels
+|  Level  | Numeric Value |                                      Description                                         |
+|:-------:|:-------------:|------------------------------------------------------------------------------------------|
+| `fatal` |     `60`      | Critical, unrecoverable errors that cause the application to crash or terminate.         |
+| `error` |     `50`      | Operational errors that require attention but allow the application to continue running. |
+| `warn`  |     `40`      | Unexpected or potentially problematic events that should be monitored.                   |
+| `info`  |     `30`      | General application events that reflect normal operation.                                |
+| `debug` |     `20`      | Diagnostic information useful for development and troubleshooting.                       |
+| `trace` |     `10`      | Highly detailed execution logs for in-depth debugging.                                   
+
+
 ## 🪴 Basic Usage
 ```ts
-import { Chalk, PinoChalk } from '@guardbot/chalk';
+import { Chalk } from '@guardbot/chalk';
 
 const logger = new Chalk({
   timestamps: true,
@@ -30,28 +41,34 @@ const logger = new Chalk({
 });
 
 logger.info('Bot started');
-logger.success('Ping executed');
 logger.warn('High memory usage');
 logger.error(new Error('Something broke'));
 ```
 
 
-### Scoped Loggers:
+### Scoped Loggers
+Create child loggers that inherit configuration while adding their own labels.
+
 ```ts
 const logger = new Chalk({
-  timestamps: true,
   labels: { client: 'blue' }
 });
 
-const cluster = logger.scope({ scopedLabels: { cluster_0: true } });
-cluster.info('Spawning structural cluster components...'); 
+const shard = logger
+  .scope({ scopedLabels: { cluster: true } })
+  .scope({ scopedLabels: { shard_4: 'cyan' } });
 
-const shard = cluster.scope({ scopedLabels: { shard_4: 'blue' } });
-shard.success('Shard gateway synchronization complete.'); 
+shard.info('Gateway connected');
+```
+**Output**
+```text
+[CLIENT] [CLUSTER] [SHARD_4] [INFO] Gateway connected
 ```
 
 
-### Custom Colors:
+### Custom Colors
+Use built-in colors or provide your own Hex and RGB values.
+
 ```ts
 import { Chalk } from '@guardbot/chalk';
 
@@ -59,27 +76,54 @@ const logger = new Chalk({
   labels: { database: '#4ADE80' }
 });
 
-logger.info('Connected successfully');
-logger.rgb([255, 100, 50], 'Custom RGB color');
+logger.red('Error');
+logger.bGreen('Success');
 logger.color('#4ADE80', 'Custom Hex Color');
+logger.rgb([255, 100, 50], 'Custom RGB Color');
 ```
 
 
-### File Logging:
+### Specialized Loggers
+Built-in helpers for common application events.
+
 ```ts
-const log = new Chalk({ file: './logs/bot.log' });
-log.info('Saved to file');
+logger.api('GET', '/users', 200, 18.4);
+
+logger.ws(
+  'READY',
+  'socket-1',
+  'CONNECTED',
+  'Gateway connection established'
+);
+
+logger.cron(
+  'Daily Cleanup',
+  'SUCCESS',
+  'Completed in 1.2s'
+);
 ```
 
-### Webhook Logging:
+## ⚙️ Configuration
+
+### File Logging
 ```ts
-const log = new Chalk({ webhook: 'https://discord.com/api/webhooks/...' });
-log.error('Critical failure!');
+const logger = new Chalk({
+  file: './logs/bot.log'
+});
+logger.info('Saved to file');
 ```
 
-### Timestamps:
+### Webhook Logging
 ```ts
-const log = new Chalk({
+const logger = new Chalk({
+  webhook: 'https://discord.com/api/webhooks/...'
+});
+logger.error('Critical failure!');
+```
+
+### Custom Timestamps
+```ts
+const logger = new Chalk({
   timestamps: true,
   timestampFormat: (date) => date.toISOString()
 });

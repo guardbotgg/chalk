@@ -1,5 +1,3 @@
-import { Level } from 'pino';
-
 export type ColorName =
   | 'red' | 'orange' | 'yellow' | 'green' | 'cyan'
   | 'blue' | 'purple' | 'violet' | 'sky' | 'pink' | 'peach' | 'grey';
@@ -12,11 +10,14 @@ export type ColorInput =
   | [number, number, number];
 
 
-export type PinoMethod = 
-  | 'info' | 'warn' | 'error' | 'debug';
+export type ChalkLevel = 
+  | 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export type LogLevel = 
-  | 'log' | 'info' | 'warn' | 'error' | 'debug' | 'success';
+  | 'trace' | 'debug' | 'log' | 'info' | 'success' | 'warn' | 'error' | 'fatal';
+
+export type ChalkPinoMode = 
+  | 'pretty' | 'json';
 
 export type ApiMethod =
   | 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -29,32 +30,39 @@ export type CronState =
 
 
 export interface ChalkOptions {
-  file?: string;
-  webhook?: string;
+  level?: ChalkLevel;
+  logFile?: string;
+  logWebhook?: string;
   useColors?: boolean;
-  labels?: Record<string, ColorInput | true>;
-  timestamps?: boolean;
+  useTimestamps?: boolean;
   timestampFormat?: (date: Date) => string;
-}
+  labels?: Record<string, ColorInput | true>;
+};
 
-
-export interface PinoChalkOptions extends ChalkOptions {
-  level?: Level;
+export interface ChalkPinoOptions extends ChalkOptions {
   mode?: 'pretty' | 'json';
-}
+};
 
 
-export interface ScopedChalkOptions {
-  file?: string;
-  webhook?: string;
+export interface ChalkScopeOptions {
+  level?: ChalkLevel;
+  logFile?: string;
+  logWebhook?: string;
   scopedLabels: Record<string, ColorInput | true | false>;
-}
+};
+
+export interface ChalkPinoScopeOptions extends ChalkScopeOptions {
+  mode?: 'pretty' | 'json';
+};
 
 
-export interface LogLabels {
+export interface ChalkLogLabels {
+  log: string;
+  trace: string;
+  debug: string;
   info: string;
+  success: string;
   warn: string;
   error: string;
-  debug: string;
-  success: string;
-}
+  fatal: string;
+};

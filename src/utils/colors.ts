@@ -1,12 +1,12 @@
+import { ColorPalette } from '../constants/colors';
 import { ColorInput, ColorName } from '../types';
-import { ColorPalette } from '../constants';
 
 
 export function colorize(input: ColorInput, useColors: boolean = true, bold: boolean = false) {
   if (!useColors) return (t: string) => t;
   const [r, g, b] = parseColor(input);
   return (txt: string) => `\x1b[${bold ? '1;' : ''}38;2;${r};${g};${b}m${txt}\x1b[0m`;
-}
+};
 
 
 export function parseColor(input: ColorInput): [number, number, number] {
@@ -35,4 +35,4 @@ export function parseColor(input: ColorInput): [number, number, number] {
   }
 
   return [255, 255, 255];
-}
+};

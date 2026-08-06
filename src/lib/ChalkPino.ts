@@ -1,40 +1,40 @@
-import { PinoChalkOptions, ColorInput, LogLabels, ScopedChalkOptions, LogLevel, ApiMethod, WSAction, CronState, PinoMethod } from '../types';
+import { ColorInput, ApiMethod, WSAction, CronState, ChalkPinoScopeOptions, ChalkPinoMode, ChalkLogLabels, ChalkPinoOptions, ChalkLevel, LogLevel } from '../types';
 import { appendFile, colorize, formatArg, sendWebhook, stripAnsi } from '../utils';
-import pino, { Level, Logger as PinoInstance } from 'pino';
-import { LabelColors } from '../constants';
+import pino, { Logger as PinoInstance } from 'pino';
+import { LabelColors } from '../constants/colors';
 import path from 'node:path';
 import fs from 'node:fs';
 
 
-export class PinoChalk {
-  private level: Level;
-  private pino: PinoInstance;
-  private mode: 'pretty' | 'json';
+export class ChalkPino {
+  private level: ChalkLevel;
+  private pinoIns: PinoInstance;
+  private pinoMode: ChalkPinoMode;
 
-  private file?: string;
-  private webhook?: string;
+  private logFile?: string;
+  private logWebhook?: string;
   private useColors: boolean;
-  private timestamps: boolean;
+  private useTimestamps: boolean;
   private timestampFormat?: (date: Date) => string;
 
-  private labels: Record<string, ColorInput> = {};
   private labelKeys: string[] = [];
-  
-  private pinoLabelStr = '';
+  private labels: Record<string, ColorInput> = {};
+
   private plainLabelsStr = '';
-  private pinoLogLabels: LogLabels;
+  private pinoLogLabels: ChalkLogLabels;
 
 
-  constructor(options: PinoChalkOptions = {}, pinoIns?: PinoInstance) {
+  constructor(options: ChalkPinoOptions = {}, pinoIns?: PinoInstance) {
     this.level = options.level ?? 'info';
-    this.mode = options.mode ?? 'pretty';
+    this.pinoMode = options.mode ?? 'pretty';
 
-    this.file = options.file;
-    this.webhook = options.webhook;
+    this.logFile = options.logFile;
+    this.logWebhook = options.logWebhook;
     this.useColors = options.useColors ?? process.stdout.isTTY;
-    this.timestamps = options.timestamps ?? true;
+    this.useTimestamps = options.useTimestamps ?? true;
     this.timestampFormat = options.timestampFormat;
 
+    let pinoLabelStr = '';
     for (const label of Object.keys(options.labels ?? {})) {
       let color = options.labels?.[label] ?? 'grey';
       if (color === true) color = LabelColors[label] ?? 'grey';
@@ -42,43 +42,43 @@ export class PinoChalk {
 
       this.labels[label] = color;
       this.plainLabelsStr += `[${upperLabel}] `;
-      this.pinoLabelStr += colorize(color, this.useColors, true)(`[${upperLabel}] `);
+      pinoLabelStr += colorize(color, this.useColors, true)(`[${upperLabel}] `);
     }
 
     this.labelKeys = Object.keys(this.labels);
     this.pinoLogLabels = {
-      info: this.pinoLabelStr + colorize('yellow', this.useColors, true)('[INFO] '),
-      warn: this.pinoLabelStr + colorize('orange', this.useColors, true)('[WARN] '),
-      error: this.pinoLabelStr + colorize('red', this.useColors, true)('[ERROR] '),
-      debug: this.pinoLabelStr + colorize('pink', this.useColors, true)('[DEBUG] '),
-      success: this.pinoLabelStr + colorize('green', this.useColors, true)('[SUCCESS] '),
+      log: pinoLabelStr,
+      trace: pinoLabelStr + colorize('sky', this.useColors, true)('[TRACE] '),
+      debug: pinoLabelStr + colorize('orange', this.useColors, true)('[DEBUG] '),
+      info: pinoLabelStr + colorize('yellow', this.useColors, true)('[INFO] '),
+      success: pinoLabelStr + colorize('green', this.useColors, true)('[SUCCESS] '),
+      warn: pinoLabelStr + colorize('orange', this.useColors, true)('[WARN] '),
+      error: pinoLabelStr + colorize('red', this.useColors, true)('[ERROR] '),
+      fatal: pinoLabelStr + colorize('red', this.useColors, true)('[FATAL] '),
     };
 
-    if (this.file) {
-      fs.mkdirSync(path.dirname(this.file), { recursive: true });
+    if (this.logFile) {
+      fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
     }
 
-    if (pinoIns) {
-      this.pino = pinoIns;
+    if (pinoIns && pinoIns.level === this.level) {
+      this.pinoIns = pinoIns;
     } else {
-      if (this.mode === 'pretty') {
-        this.pino = pino({
-          level: this.level,
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              ignore: 'pid,hostname,level' + (this.timestamps ? '' : ',time'),
-            }
+      if (this.pinoMode === 'json') this.pinoIns = pino({ level: this.level });
+      else this.pinoIns = pino({
+        level: this.level,
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            ignore: 'pid,hostname,level' + (this.useTimestamps ? '' : ',time'),
           }
-        })
-      } else {
-        this.pino = pino({ level: this.level });
-      }
+        }
+      });
     }
   }
 
   // Scoped Logger
-  scope(options: ScopedChalkOptions): PinoChalk {
+  scope(options: ChalkPinoScopeOptions): ChalkPino {
     const combinedLabels = { ...this.labels, ...options.scopedLabels };
     const newLabels: Record<string, ColorInput | true> = {};
 
@@ -87,26 +87,38 @@ export class PinoChalk {
       newLabels[label] = options.scopedLabels[label] ?? this.labels[label] ?? 'grey';
     }
 
-    return new PinoChalk(
-      {
-        level: this.level, mode: this.mode, useColors: this.useColors,
-        timestamps: this.timestamps, timestampFormat: this.timestampFormat,
-        file: options.file ?? this.file,
-        webhook: options.webhook ?? this.webhook,
-        labels: newLabels
-      }, 
-      this.pino
-    );
+    return new ChalkPino({
+      level: this.level,
+      mode: this.pinoMode,
+      logFile: options.logFile ?? this.logFile,
+      logWebhook: options.logWebhook ?? this.logWebhook,
+      useColors: this.useColors,
+      useTimestamps: this.useTimestamps,
+      timestampFormat: this.timestampFormat,
+      labels: newLabels  
+    }, this.pinoIns);
   }
 
 
   // Logging Methods
+  trace(...args: any[]) {
+    this.print('trace', 'trace', this.cleanArgs(args), false);
+  }
+
+  debug(...args: any[]) {
+    this.print('debug', 'debug', this.cleanArgs(args), false);
+  }
+  
   log(...args: any[]) {
-    this.print('log', 'info', this.cleanArgs(args), false);
+    this.print('log', 'fatal', this.cleanArgs(args), false);
   }
 
   info(...args: any[]) {
     this.print('info', 'info', this.cleanArgs(args), false);
+  }
+
+  success(...args: any[]) {
+    this.print('success', 'info', this.cleanArgs(args), true);
   }
 
   warn(...args: any[]) {
@@ -117,12 +129,8 @@ export class PinoChalk {
     this.print('error', 'error', this.cleanArgs(args), true);
   }
 
-  debug(...args: any[]) {
-    this.print('debug', 'debug', this.cleanArgs(args), false);
-  }
-
-  success(...args: any[]) {
-    this.print('success', 'info', this.cleanArgs(args), true);
+  fatal(...args: any[]) {
+    this.print('fatal', 'fatal', this.cleanArgs(args), true);
   }
 
 
@@ -153,11 +161,12 @@ export class PinoChalk {
 
   // Extra Helpers
   public api(method: ApiMethod, url: string, statusCode: number, durationMs: number) {
+    const label = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
     const sc = statusCode >= 500 ? 'red' : statusCode >= 400 ? 'orange' : statusCode >= 300 ? 'cyan' : 'green';
     const mc = method === 'GET' ? 'green' : method === 'POST' ? 'sky' : method === 'DELETE' ? 'red' : 'yellow';
-    const msg = `${this.bcolor(mc, `[${method}]`)} ${url} - Status: ${this.bcolor(sc, String(statusCode))} (${durationMs.toFixed(1)}ms)`;
     this.print(
-      'info', 'info', msg,
+      label, label,
+      `${this.bcolor(mc, `[${method}]`)} ${url} - Status: ${this.bcolor(sc, String(statusCode))} (${durationMs.toFixed(1)}ms)`,
       statusCode >= 400,
       this.bcolor(LabelColors['api'] || 'sky', '[API] '), '[API] ',
       { type: 'api', method, url, status: statusCode, duration: durationMs }
@@ -166,10 +175,11 @@ export class PinoChalk {
 
 
   public ws(eventId: string, socketId: string, action: WSAction, desc = '') {
-    const ac = action.startsWith('EVENT') ? 'purple' : action === 'CONNECTED' ? 'green' : 'red';
-    const msg = `${this.bcolor(ac, `[${action}]`)} Socket: ${this.bcolor('cyan', socketId)} | Id: ${eventId} ${desc ? `- ${desc}` : ''}`;
+    const label = action === 'DISCONNECTED' ? 'warn' : action === 'CONNECTED' ? 'info' : 'debug';
+    const ac = action === 'DISCONNECTED' ? 'orange' : action === 'CONNECTED' ? 'green' : 'purple';
     this.print(
-      'info', 'info', msg,
+      label, label,
+      `${this.bcolor(ac, `[${action}]`)} Socket: ${this.bcolor('cyan', socketId)} | Id: ${eventId} ${desc ? `- ${desc}` : ''}`,
       (action === 'CONNECTED' || action === 'DISCONNECTED'),
       this.bcolor(LabelColors['ws'] || 'purple', '[WS] '), '[WS] ',
       { type: 'ws', eventId, socketId, action, description: desc }
@@ -177,10 +187,11 @@ export class PinoChalk {
   }
 
   public cron(jobName: string, state: CronState, message = '') {
+    const label = state === 'FAILED' ? 'error' : 'info';
     const sc = state === 'SUCCESS' ? 'green' : state === 'FAILED' ? 'red' : 'yellow';
-    const msg = `Job: ${this.bcolor('purple', jobName)} -> ${this.bcolor(sc, `[${state}]`)} ${message}`;
     this.print(
-      state === 'FAILED' ? 'error' : 'success', state === 'FAILED' ? 'error' : 'info', msg,
+      label, label,
+      `Job: ${this.bcolor('purple', jobName)} -> ${this.bcolor(sc, `[${state}]`)} ${message}`,
       state === 'FAILED',
       this.bcolor(LabelColors['cron'] || 'peach', '[CRON] '), '[CRON] ',
       { type: 'cron', jobName, state, message }
@@ -195,23 +206,23 @@ export class PinoChalk {
 
   private print(
     level: LogLevel, 
-    pinoMethod: PinoMethod, 
+    ChalkLevel: ChalkLevel, 
     rawMessage: string, 
     sendHook: boolean = false, 
     domainPrettyLabel: string = '', 
     domainPlainLabel: string = '', 
     metadata: Record<string, any> = {}
   ) {
-    if (this.mode === 'json') this.pino[pinoMethod]({ scopes: this.labelKeys, loglevel: level, ...metadata }, rawMessage);
-    else this.pino.info(`${domainPrettyLabel}${level === 'log' ? this.pinoLabelStr : this.pinoLogLabels[level]}${rawMessage}`);
+    if (this.pinoMode === 'json') this.pinoIns[ChalkLevel]({ scopes: this.labelKeys, loglevel: level, ...metadata }, rawMessage);
+    else this.pinoIns[ChalkLevel](`${domainPrettyLabel}${this.pinoLogLabels[level]}${rawMessage}`);
 
-    if (this.file || this.webhook) {
+    if (this.logFile || this.logWebhook) {
       const levelPrefix = level === 'log' ? '' : `[${level.toUpperCase()}] `;
       const tsText = this.timestampFormat ? this.timestampFormat(new Date()) : this.dateFormatter.format(new Date());
       const cleanOuput = `[${tsText}] ${domainPlainLabel}${this.plainLabelsStr}${levelPrefix}${stripAnsi(rawMessage)}`;
 
-      if (this.file) void appendFile(this.file, cleanOuput);
-      if (this.webhook && sendHook) void sendWebhook(this.webhook, cleanOuput);
+      if (this.logFile) void appendFile(this.logFile, cleanOuput);
+      if (this.logWebhook && sendHook) void sendWebhook(this.logWebhook, cleanOuput);
     }
   }
 

@@ -1,7 +1,8 @@
-import { Chalk } from './chalk/chalk';
+import { Chalk } from './lib/Chalk';
 
-export { Chalk } from './chalk/chalk';
-export { PinoChalk } from './chalk/pinoChalk';
-export { ColorPalette, LabelColors } from './constants';
-export type { ChalkOptions, PinoChalkOptions, ColorInput, ColorName } from './types';
+
 export default Chalk;
+export { Chalk } from './lib/Chalk';
+export { ChalkPino } from './lib/ChalkPino';
+export { ColorPalette, LabelColors } from './constants/colors'; 
+export type { ChalkOptions, ChalkPinoOptions, ColorInput, ColorName, ChalkLevel, } from './types';

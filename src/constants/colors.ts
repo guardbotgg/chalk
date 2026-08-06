@@ -18,19 +18,26 @@ export const ColorPalette: Record<ColorName, [number, number, number]> = {
 
 
 export const LabelColors: Record<string, ColorName> = {
-  client: 'orange',
-  cluster: 'cyan',
-  manager: 'sky',
-  command: 'purple',
-  listener: 'yellow',
-  shard: 'blue',
+  // Methods
+  trace: 'sky',
+  debug: 'orange',
   info: 'yellow',
+  success: 'green',
   warn: 'orange',
   error: 'red',
-  debug: 'pink',
-  success: 'green',
+  fatal: 'red',
+  // Backend
   api: 'sky',
   ws: 'purple',
   cron: 'peach',
-  performance: 'violet'
+  performance: 'violet',
+  cluster: 'cyan',
+  shard: 'blue',
+  connected: 'green',
+  disconnected: 'red',
+  // Discord 
+  client: 'orange',
+  manager: 'sky',
+  command: 'purple',
+  listener: 'yellow',
 } as const;

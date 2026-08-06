@@ -1,30 +1,33 @@
-import { ApiMethod, ChalkOptions, ColorInput, CronState, LogLabels, LogLevel, ScopedChalkOptions, WSAction } from '../types';
+import { ApiMethod, ChalkLevel, ChalkLogLabels, ChalkOptions, ChalkScopeOptions, ColorInput, CronState, LogLevel, WSAction } from '../types';
 import { appendFile, colorize, formatArg, sendWebhook, stripAnsi } from '../utils';
-import { LabelColors } from '../constants';
+import { ChalkLevelValue } from '../constants/levels';
+import { LabelColors } from '../constants/colors';
 import path from 'node:path';
 import fs from 'node:fs';
 
 
 export class Chalk {
-  private file?: string;
-  private webhook?: string;
+  private level: ChalkLevel;
+  private logFile?: string;
+  private logWebhook?: string;
   private useColors: boolean;
-  private timestamps: boolean;
+  private useTimestamps: boolean;
   private timestampFormat?: (date: Date) => string;
   private labels: Record<string, ColorInput> = {};
-  
-  private prettyLogLabels: LogLabels;
-  private prettyLabelStr: string = '';
+
+  private prettyLogLabels: ChalkLogLabels;
   private plainLabelStr: string = '';
 
 
   constructor(options: ChalkOptions = {}) {
-    this.file = options.file;
-    this.webhook = options.webhook;
+    this.level = options.level ?? 'info';
+    this.logFile = options.logFile;
+    this.logWebhook = options.logWebhook;
     this.useColors = options.useColors ?? process.stdout.isTTY;
-    this.timestamps = options.timestamps ?? true;
+    this.useTimestamps = options.useTimestamps ?? true;
     this.timestampFormat = options.timestampFormat;
 
+    let prettyLabelStr = '';
     for (const label of Object.keys(options.labels ?? {})) {
       let color = options.labels?.[label] ?? 'grey';
       if (color === true) color = LabelColors[label] ?? 'grey';
@@ -32,24 +35,27 @@ export class Chalk {
 
       this.labels[label] = color;
       this.plainLabelStr += `[${upperLabel}] `;
-      this.prettyLabelStr += colorize(color, this.useColors, true)(`[${upperLabel}] `);
+      prettyLabelStr += colorize(color, this.useColors, true)(`[${upperLabel}] `);
     }
 
     this.prettyLogLabels = {
-      info: this.prettyLabelStr + colorize('yellow', this.useColors, true)('[INFO] '),
-      warn: this.prettyLabelStr + colorize('orange', this.useColors, true)('[WARN] '),
-      error: this.prettyLabelStr + colorize('red', this.useColors, true)('[ERROR] '),
-      debug: this.prettyLabelStr + colorize('pink', this.useColors, true)('[DEBUG] '),
-      success: this.prettyLabelStr + colorize('green', this.useColors, true)('[SUCCESS] '),
+      log: prettyLabelStr,
+      trace: prettyLabelStr + colorize('sky', this.useColors, true)('[TRACE] '),
+      debug: prettyLabelStr + colorize('orange', this.useColors, true)('[DEBUG] '),
+      info: prettyLabelStr + colorize('yellow', this.useColors, true)('[INFO] '),
+      success: prettyLabelStr + colorize('green', this.useColors, true)('[SUCCESS] '),
+      warn: prettyLabelStr + colorize('orange', this.useColors, true)('[WARN] '),
+      error: prettyLabelStr + colorize('red', this.useColors, true)('[ERROR] '),
+      fatal: prettyLabelStr + colorize('red', this.useColors, true)('[FATAL] '),
     };
 
-    if (this.file) {
-      fs.mkdirSync(path.dirname(this.file), { recursive: true });
+    if (this.logFile) {
+      fs.mkdirSync(path.dirname(this.logFile), { recursive: true });
     }
   }
 
   // Scoped Logger
-  scope(options: ScopedChalkOptions): Chalk {
+  scope(options: ChalkScopeOptions): Chalk {
     const combinedLabels = { ...this.labels, ...options.scopedLabels };
     const newLabels: Record<string, ColorInput | true> = {};
 
@@ -58,41 +64,48 @@ export class Chalk {
       newLabels[label] = options.scopedLabels[label] ?? this.labels[label] ?? 'grey';
     }
 
-    return new Chalk(
-      {
-        file: options.file ?? this.file,
-        webhook: options.webhook ?? this.webhook,
-        labels: newLabels,
-        useColors: this.useColors,
-        timestamps: this.timestamps, 
-        timestampFormat: this.timestampFormat,
-      }, 
-    );
+    return new Chalk({
+      level: options.level ?? this.level,
+      logFile: options.logFile ?? this.logFile,
+      logWebhook: options.logWebhook ?? this.logWebhook,
+      useColors: this.useColors,
+      useTimestamps: this.useTimestamps,
+      timestampFormat: this.timestampFormat,
+      labels: newLabels,
+    });
   }
 
   // Logging Methods
-  log(...args: any[]) {
-    this.print('log', this.cleanArgs(args), false);
-  }
-
-  info(...args: any[]) {
-    this.print('info', this.cleanArgs(args), false);
-  }
-
-  warn(...args: any[]) {
-    this.print('warn', this.cleanArgs(args), true);
-  }
-
-  error(...args: any[]) {
-    this.print('error', this.cleanArgs(args), true);
+  trace(...args: any[]) {
+    this.print('trace', 'trace', this.cleanArgs(args), false);
   }
 
   debug(...args: any[]) {
-    this.print('debug', this.cleanArgs(args), false);
+    this.print('debug', 'debug', this.cleanArgs(args), false);
+  }
+
+  info(...args: any[]) {
+    this.print('info', 'info', this.cleanArgs(args), false);
+  }
+
+  log(...args: any[]) {
+    this.print('log', 'fatal', this.cleanArgs(args), false);
   }
 
   success(...args: any[]) {
-    this.print('success', this.cleanArgs(args), true);
+    this.print('success', 'info', this.cleanArgs(args), true);
+  }
+
+  warn(...args: any[]) {
+    this.print('warn', 'warn', this.cleanArgs(args), true);
+  }
+
+  error(...args: any[]) {
+    this.print('error', 'error', this.cleanArgs(args), true);
+  }
+
+  fatal(...args: any[]) {
+    this.print('fatal', 'fatal', this.cleanArgs(args), true);
   }
   
 
@@ -132,21 +145,21 @@ export class Chalk {
     const mc = method === 'GET' ? 'green' : method === 'POST' ? 'sky' : method === 'DELETE' ? 'red' : 'yellow';
     const msg = `${this.bcolor(mc, `[${method}]`)} ${url} - Status: ${this.bcolor(sc, String(statusCode))} (${durationMs.toFixed(1)}ms)`;
     const prettyLabel = this.bcolor(LabelColors['api'] || 'sky', '[API] ');
-    this.print('info', msg, statusCode >= 400, prettyLabel, '[API] ');
+    this.print('info', 'info', msg, statusCode >= 400, prettyLabel, '[API] ');
   }
 
   public ws(eventId: string, socketId: string, action: WSAction, desc = '') {
     const ac = action.startsWith('EVENT') ? 'purple' : action === 'CONNECTED' ? 'green' : 'red';
     const msg = `${this.bcolor(ac, `[${action}]`)} Socket: ${this.bcolor('cyan', socketId)} | Id: ${eventId} ${desc ? `- ${desc}` : ''}`;
     const prettyLabel = this.bcolor(LabelColors['ws'] || 'purple', '[WS] ');
-    this.print('info', msg, (action === 'CONNECTED' || action === 'DISCONNECTED'), prettyLabel, '[WS] ');
+    this.print('info', 'info', msg, (action === 'CONNECTED' || action === 'DISCONNECTED'), prettyLabel, '[WS] ');
   }
 
   public cron(jobName: string, state: CronState, message = '') {
     const sc = state === 'SUCCESS' ? 'green' : state === 'FAILED' ? 'red' : 'yellow';
     const msg = `Job: ${this.bcolor('purple', jobName)} -> ${this.bcolor(sc, `[${state}]`)} ${message}`;
     const prettyLabel = this.bcolor(LabelColors['cron'] || 'peach', '[CRON] ');
-    this.print(state === 'FAILED' ? 'error' : 'success', msg, state === 'FAILED', prettyLabel, '[CRON] ');
+    this.print(state === 'FAILED' ? 'error' : 'success', 'info', msg, state === 'FAILED', prettyLabel, '[CRON] ');
   }
 
 
@@ -155,19 +168,25 @@ export class Chalk {
     return args.map(a => formatArg(a, this.useColors)).join(' ');
   }
 
-  private print(level: LogLevel, rawMessage: string, sendHook: boolean = false, domainPrettyLabel: string = '', domainPlainLabel: string = '') {
+  private print(
+    level: LogLevel,
+    chalkLevel: ChalkLevel, 
+    rawMessage: string, 
+    sendHook: boolean = false, 
+    domainPrettyLabel: string = '', 
+    domainPlainLabel: string = ''
+  ) {
+    if (ChalkLevelValue[chalkLevel] < ChalkLevelValue[this.level]) return;
     const tsText = this.timestampFormat ? this.timestampFormat(new Date()) : this.dateFormatter.format(new Date());
-    const ts = this.timestamps ? `${this.bcolor('grey', `[${tsText}]`)} ` : '';
+    const ts = this.useTimestamps ? `${this.bcolor('grey', `[${tsText}]`)} ` : '';
+    console.log(`${ts}${domainPrettyLabel}${this.prettyLogLabels[level]}${rawMessage}`);
 
-    const labels = level === 'log' ? this.prettyLabelStr : this.prettyLogLabels[level];
-    console.log(`${ts}${domainPrettyLabel}${labels}${rawMessage}`);
-
-    if (this.file || this.webhook) {
+    if (this.logFile || this.logWebhook) {
       const levelPrefix = level === 'log' ? '' : `[${level.toUpperCase()}] `;
       const cleanOutput = `[${tsText}] ${domainPlainLabel}${this.plainLabelStr}${levelPrefix}${stripAnsi(rawMessage)}`;
 
-      if (this.file) void appendFile(this.file, cleanOutput);
-      if (this.webhook && sendHook) void sendWebhook(this.webhook, cleanOutput);
+      if (this.logFile) void appendFile(this.logFile, cleanOutput);
+      if (this.logWebhook && sendHook) void sendWebhook(this.logWebhook, cleanOutput);
     }
   }
 
@@ -204,4 +223,5 @@ export class Chalk {
   bPink(...content: any[]) { return this.bcolor('pink', ...content); }
   bPeach(...content: any[]) { return this.bcolor('peach', ...content); }
   bGrey(...content: any[]) { return this.bcolor('grey', ...content); }
-}
+};
+

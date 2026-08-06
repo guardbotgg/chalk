@@ -15,7 +15,7 @@ export function appendFile(file: string, content: string): Promise<void> {
 
   fileQueues.set(file, next);
   return next as Promise<void>;
-}
+};
 
 
 export function sendWebhook(webhook: string, content: string): Promise<void> {
@@ -40,4 +40,4 @@ export function sendWebhook(webhook: string, content: string): Promise<void> {
 
   webhookQueues.set(webhook, next);
   return next as Promise<void>;
-}
+};

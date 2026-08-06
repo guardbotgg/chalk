@@ -1,6 +1,6 @@
 {
   "name": "@guardbot/chalk",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A simple colored logger built for apps.",
   "type": "module",
   "main": "./build/index.cjs",
