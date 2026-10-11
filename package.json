@@ -1,28 +1,37 @@
 {
   "name": "@guardbot/chalk",
-  "version": "2.1.0",
-  "description": "A simple colored logger built for apps.",
+  "version": "3.0.0",
+  "description": "A fast, colorful logger built for apps, with pretty & JSON output.",
   "type": "module",
   "main": "./build/index.cjs",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
     ".": {
-      "types": "./build/index.d.ts",
-      "import": "./build/index.js",
-      "require": "./build/index.cjs"
+      "import": {
+        "types": "./build/index.d.ts",
+        "default": "./build/index.js"
+      },
+      "require": {
+        "types": "./build/index.d.cts",
+        "default": "./build/index.cjs"
+      }
     }
   },
   "files": [
     "build",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "clean": "rimraf build",
-    "build": "yarn run clean && tsup",
-    "test:chalk": "tsx tests/chalk.test.ts",
-    "test:pino": "tsx tests/pino.test.ts",
-    "test:webhook": "tsx tests/webhook.test.ts"
+    "build": "tsup",
+    "lint": "eslint .",
+    "check:package": "attw --pack .",
+    "bench": "yarn build && node bench/index.js",
+    "dev": "tsx --env-file-if-exists=.env tests/index.ts",
+    "typecheck": "tsc && tsc -p tests/tsconfig.json",
+    "test": "yarn build && node --test \"tests/unit/**/*.test.js\"",
+    "prepublishOnly": "yarn typecheck && yarn lint && yarn test && yarn check:package"
   },
   "sideEffects": false,
   "publishConfig": {
@@ -34,10 +43,14 @@
   },
   "keywords": [
     "logger",
+    "logging",
     "chalk",
     "colors",
     "terminal",
-    "pino"
+    "json",
+    "ndjson",
+    "discord",
+    "webhook"
   ],
   "license": "MIT",
   "author": "Aniket (github.com/aniket091)",
@@ -45,18 +58,20 @@
   "bugs": {
     "url": "https://github.com/guardbotgg/chalk/issues"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "pino": "^10.3.1",
-    "pino-pretty": "^13.1.3"
-  },
   "devDependencies": {
-    "@types/node": "^20.11.30",
-    "rimraf": "^5.0.5",
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "pino": "^10.3.1",
     "tsup": "^8.5.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.4.0"
-  }
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "yarn@1.22.22"
 }
