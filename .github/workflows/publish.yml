@@ -13,21 +13,40 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
-          package-manager-cache: false
-          cache: 'yarn'
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Build Framework
-        run: yarn build
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Build & Test
+        run: yarn test
+
+      - name: Check Package Exports
+        run: yarn check:package
+
+      - name: Verify Release Tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$RELEASE_TAG" ]; then
+            echo "Release tag $RELEASE_TAG does not match package.json version $VERSION"
+            exit 1
+          fi
 
       - name: Publish to NPM
-        run: npm publish --no-git-checks
+        env:
+          NPM_TAG: ${{ github.event.release.prerelease && 'next' || 'latest' }}
+        run: npm publish --access public --tag "$NPM_TAG"
